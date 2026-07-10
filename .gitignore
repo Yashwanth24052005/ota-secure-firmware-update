@@ -1,0 +1,6 @@
+venv/
+keys/*.pem
+__pycache__/
+*.pyc
+.env
+.qodo/
