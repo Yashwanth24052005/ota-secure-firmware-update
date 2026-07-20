@@ -1,0 +1,49 @@
+name: Sign Firmware on Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  sign-firmware:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Sign firmware
+        env:
+          FIRMWARE_PRIVATE_KEY: ${{ secrets.FIRMWARE_PRIVATE_KEY }}
+        run: |
+          python scripts/sign_firmware.py --version "${{ steps.get_version.outputs.version }}" --ci
+
+      - name: Verify signature (sanity check before publishing)
+        run: python scripts/verify_firmware.py
+
+      - name: Run test suite
+        run: |
+          python -m unittest scripts.test_signing_pipeline -v
+          python scripts/test_tamper_detection.py
+
+      - name: Upload signed firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-firmware-${{ steps.get_version.outputs.version }}
+          path: |
+            firmware/dummy_firmware.bin
+            firmware/dummy_firmware.sig
+            firmware/dummy_firmware.meta.json
