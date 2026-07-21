@@ -37,3 +37,17 @@ def load_public_key(filepath: str):
         )
     with open(filepath, "rb") as f:
         return serialization.load_pem_public_key(f.read())
+
+
+def load_private_key_from_env(env_var_name: str = "FIRMWARE_PRIVATE_KEY"):
+    """Loads a private key from an environment variable (used in CI),
+    raising a clear error if the variable isn't set."""
+    key_data = os.environ.get(env_var_name)
+    if not key_data:
+        raise EnvironmentError(
+            f"Environment variable {env_var_name} not set. "
+            "This is required when running in CI."
+        )
+    return serialization.load_pem_private_key(
+        key_data.encode(), password=None
+    )
